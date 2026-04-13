@@ -20,12 +20,12 @@ elif [[ "${phpVersion}" == "8.2" ]]; then
   composerVersion="2.6"
 elif [[ "${phpVersion}" == "8.3" ]]; then
   composerVersion="2.6"
+elif [[ "${phpVersion}" == "8.4" ]]; then
+  composerVersion="2.9"
 else
   >&2 echo "Unsupported PHP version: ${phpVersion}"
   exit 1
 fi
-
-install-package "php${phpVersion}-curl"
 
 cosyses Composer "${composerVersion}"
 

@@ -6,13 +6,15 @@ namespace FeWeDev\Base;
 
 /**
  * @author      Andreas Knollmann
- * @copyright   Copyright (c) 2024 Softwareentwicklung Andreas Knollmann
+ * @copyright   Copyright (c) 2024-2026 Softwareentwicklung Andreas Knollmann
  * @license     http://www.opensource.org/licenses/mit-license.php MIT
  */
 class Variables
 {
     /**
      * @param mixed $value
+     *
+     * @phpstan-assert-if-false !null $value
      */
     public function isEmpty($value): bool
     {
