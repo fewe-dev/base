@@ -2,3 +2,8 @@ parameters:
     level: 9
     paths:
         - src
+    # the PHP versions supported by the library (composer.json: php >=7.4), so that behavior of older versions is
+    # considered, for example mb_convert_encoding() returning false in PHP 7.4
+    phpVersion:
+        min: 70400
+        max: 80599
