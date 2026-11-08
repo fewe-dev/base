@@ -109,9 +109,11 @@ class Variables
     }
 
     /**
+     * Converts a value into an integer, for example an ID that Magento declares as int but returns as string.
+     *
      * @param mixed $value
      *
-     * @throws \Exception
+     * @throws \InvalidArgumentException if the value is null or not scalar
      */
     public function intValue($value): int
     {
@@ -127,6 +129,6 @@ class Variables
             }
         }
 
-        throw new \Exception(sprintf('Could not convert value: %s to int', var_export($value, true)));
+        throw new \InvalidArgumentException(sprintf('Could not convert value: %s to int', var_export($value, true)));
     }
 }
