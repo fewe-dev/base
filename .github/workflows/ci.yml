@@ -1,0 +1,118 @@
+# Checks the library with every supported PHP version and releases it when the checks pass.
+#
+# Checks (on every push and pull request):
+#   - unit tests (PHPUnit), with every PHP version of composer.json (php >=7.4)
+#   - static analysis (PHPStan with phpstan.neon) and coding standard (PHP CS Fixer), with one PHP version
+#
+# Release (on a push to the default branch, only if all checks passed):
+#   - takes the version from composer.json
+#   - does nothing if a tag for this version already exists
+#   - creates the tag and a GitHub release with the section of CHANGELOG.md for this version
+#   - Packagist picks up the new tag through the GitHub webhook of the repository
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"]
+        include:
+          # PHP CS Fixer does not support the newest PHP version right away
+          - php: "8.4"
+            analysis: true
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --no-interaction --no-progress
+
+      - name: Unit tests
+        run: vendor/bin/phpunit tests
+
+      - name: Static analysis
+        if: matrix.analysis
+        run: vendor/bin/phpstan analyse --no-progress
+
+      - name: Coding standard
+        if: matrix.analysis
+        run: vendor/bin/php-cs-fixer fix src --dry-run --diff
+
+  release:
+    name: Release
+    needs: checks
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.repository }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Release version from composer.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r '.version // empty' composer.json)
+          if [[ -z "${version}" ]]; then
+            echo "::notice::No version in composer.json, nothing to release"
+            exit 0
+          fi
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version ${version} in composer.json is no plain semantic version (major.minor.patch)"
+            exit 1
+          fi
+          if git rev-parse --quiet --verify "refs/tags/${version}" >/dev/null; then
+            echo "::notice::Version ${version} is already released"
+            exit 0
+          fi
+
+          latestVersion=$(git tag -l | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
+          if [[ -n "${latestVersion}" ]] && [[ $(printf '%s\n%s\n' "${latestVersion}" "${version}" | sort -V | tail -n 1) != "${version}" ]]; then
+            echo "::error::Version ${version} in composer.json is lower than the latest release ${latestVersion}"
+            exit 1
+          fi
+
+          # the section "## <version>" of CHANGELOG.md, up to the next section of the same level
+          notes=""
+          if [[ -f CHANGELOG.md ]]; then
+            notes=$(awk -v version="${version}" '
+              /^## / { if (found) exit; if ($2 == version) { found = 1; next } }
+              found { print }
+            ' CHANGELOG.md)
+          fi
+          if [[ -z "${notes//[[:space:]]/}" ]]; then
+            echo "::warning::No section for version ${version} in CHANGELOG.md"
+            notes="Release ${version}"
+          fi
+          printf '%s\n' "${notes}" > release-notes.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${version}" -m "${version}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${version}"
+          gh release create "${version}" --verify-tag --title "${version}" --notes-file release-notes.md
+          echo "::notice::Released ${version}"

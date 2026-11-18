@@ -109,6 +109,26 @@ class Variables
     }
 
     /**
+     * Converts a value into a string like stringValue(), but returns the default value for values that have no string
+     * representation (null, arrays and objects without __toString()) instead of their var_export() code, for example
+     * "NULL" for null.
+     *
+     * @param mixed $value
+     */
+    public function stringValueOrDefault($value, string $defaultValue = ''): string
+    {
+        if (\is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if (\is_object($value) && method_exists($value, '__toString')) {
+            return (string) $value->__toString();
+        }
+
+        return $defaultValue;
+    }
+
+    /**
      * Converts a value into an integer, for example an ID that Magento declares as int but returns as string.
      *
      * @param mixed $value
