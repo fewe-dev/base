@@ -52,7 +52,10 @@ class VariablesGetChangedDataTest extends TestCase
     {
         $variables = new Variables();
 
-        $result = $variables->getChangedData(['name' => 'Bag', 'color' => 'red'], ['name' => 'Bag', 'size' => 'L']);
+        $result = $variables->getChangedData(
+            ['name' => 'Bag', 'color' => 'red', 'material' => null],
+            ['name' => 'Bag', 'size' => 'L', 'news_from_date' => null, 'gift_message' => '']
+        );
 
         $this->assertSame(['color', 'size'], $result);
     }

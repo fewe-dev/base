@@ -38,9 +38,9 @@ class Variables
     }
 
     /**
-     * Returns the keys whose values differ between the old and the new data: keys of only one of them, and keys with
-     * different values. Numbers are compared by value, booleans with numbers as 0 and not 0, strings case-insensitively,
-     * null equals an empty string. Arrays and objects are not compared. The key "updated_at" is ignored.
+     * Returns the keys whose values differ between the old and the new data. A missing key has the value null, null
+     * equals an empty string. Numbers are compared by value, booleans with numbers as 0 and not 0, strings
+     * case-insensitively. Arrays and objects are not compared. The key "updated_at" is ignored.
      *
      * @param array<mixed, mixed> $oldData
      * @param array<mixed, mixed> $newData
@@ -51,20 +51,12 @@ class Variables
     {
         $changedAttributeCodes = [];
 
-        foreach ($oldData as $attributeCode => $oldValue) {
+        foreach (array_keys($oldData + $newData) as $attributeCode) {
             if (0 === strcasecmp((string) $attributeCode, 'updated_at')) {
                 continue;
             }
 
-            if (!array_key_exists($attributeCode, $newData)) {
-                $changedAttributeCodes[] = $attributeCode;
-            } elseif ($this->isValueChanged($oldValue, $newData[$attributeCode])) {
-                $changedAttributeCodes[] = $attributeCode;
-            }
-        }
-
-        foreach (array_keys($newData) as $attributeCode) {
-            if (0 !== strcasecmp((string) $attributeCode, 'updated_at') && !array_key_exists($attributeCode, $oldData)) {
+            if ($this->isValueChanged($oldData[$attributeCode] ?? null, $newData[$attributeCode] ?? null)) {
                 $changedAttributeCodes[] = $attributeCode;
             }
         }

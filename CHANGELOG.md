@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.3
+
+### Fixed
+
+- `Variables::getChangedData()` returned keys that exist only in one of the data arrays also when their value is null
+  or an empty string, for example the empty attributes that Magento adds to products while saving them. A missing key
+  counts as null.
+
 ## 2.4.2
 
 ### Fixed
