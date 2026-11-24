@@ -38,6 +38,10 @@ class Variables
     }
 
     /**
+     * Returns the keys whose values differ between the old and the new data: keys of only one of them, and keys with
+     * different values. Numbers are compared by value, booleans with numbers as 0 and not 0, strings case-insensitively,
+     * null equals an empty string. Arrays and objects are not compared. The key "updated_at" is ignored.
+     *
      * @param array<mixed, mixed> $oldData
      * @param array<mixed, mixed> $newData
      *
@@ -45,51 +49,27 @@ class Variables
      */
     public function getChangedData(array $oldData, array $newData): array
     {
-        if (0 === count($oldData)) {
-            $changedAttributeCodes = 0 === count($newData) ? [] : array_keys($newData);
-        } else {
-            $changedAttributeCodes = 0 === count($newData) ? $newData : [];
+        $changedAttributeCodes = [];
 
-            foreach ($oldData as $oldDataAttributeCode => $oldDataAttributeValue) {
-                if (0 === strcasecmp((string) $oldDataAttributeCode, 'updated_at')) {
-                    continue;
-                }
+        foreach ($oldData as $attributeCode => $oldValue) {
+            if (0 === strcasecmp((string) $attributeCode, 'updated_at')) {
+                continue;
+            }
 
-                if (!array_key_exists($oldDataAttributeCode, $newData)) {
-                    $changedAttributeCodes[] = $oldDataAttributeCode;
-                } else {
-                    $newDataAttributeValue = $newData[$oldDataAttributeCode];
-
-                    if (is_scalar($oldDataAttributeValue) && is_scalar($newDataAttributeValue)) {
-                        if (is_numeric($oldDataAttributeValue) && is_numeric($newDataAttributeValue)) {
-                            if ((float) $oldDataAttributeValue != (float) $newDataAttributeValue) {
-                                $changedAttributeCodes[] = $oldDataAttributeCode;
-                            }
-                        } elseif (is_bool($oldDataAttributeValue) && is_bool($newDataAttributeValue)) {
-                            if ($oldDataAttributeValue !== $newDataAttributeValue) {
-                                $changedAttributeCodes[] = $oldDataAttributeValue;
-                            }
-                        } elseif (is_bool($oldDataAttributeValue) && is_numeric($newDataAttributeValue)) {
-                            if ($oldDataAttributeValue !== (0 !== $newDataAttributeValue)) {
-                                $changedAttributeCodes[] = $oldDataAttributeValue;
-                            }
-                        } elseif (is_numeric($oldDataAttributeValue) && is_bool($newDataAttributeValue)) {
-                            if ((0 !== $oldDataAttributeValue) !== $newDataAttributeValue) {
-                                $changedAttributeCodes[] = $oldDataAttributeValue;
-                            }
-                        } else {
-                            if (0 !== strcasecmp((string) $oldDataAttributeValue, (string) $newDataAttributeValue)) {
-                                $changedAttributeCodes[] = $oldDataAttributeCode;
-                            }
-                        }
-                    }
-
-                    unset($newData[$oldDataAttributeCode]);
-                }
+            if (!array_key_exists($attributeCode, $newData)) {
+                $changedAttributeCodes[] = $attributeCode;
+            } elseif ($this->isValueChanged($oldValue, $newData[$attributeCode])) {
+                $changedAttributeCodes[] = $attributeCode;
             }
         }
 
-        return array_values(array_unique($changedAttributeCodes));
+        foreach (array_keys($newData) as $attributeCode) {
+            if (0 !== strcasecmp((string) $attributeCode, 'updated_at') && !array_key_exists($attributeCode, $oldData)) {
+                $changedAttributeCodes[] = $attributeCode;
+            }
+        }
+
+        return $changedAttributeCodes;
     }
 
     /**
@@ -150,5 +130,34 @@ class Variables
         }
 
         throw new \InvalidArgumentException(sprintf('Could not convert value: %s to int', var_export($value, true)));
+    }
+
+    /**
+     * @param mixed $oldValue
+     * @param mixed $newValue
+     */
+    private function isValueChanged($oldValue, $newValue): bool
+    {
+        if (null === $oldValue) {
+            $oldValue = '';
+        }
+
+        if (null === $newValue) {
+            $newValue = '';
+        }
+
+        if (!is_scalar($oldValue) || !is_scalar($newValue)) {
+            return false;
+        }
+
+        if (is_bool($oldValue) || is_bool($newValue)) {
+            if ((is_bool($oldValue) || is_numeric($oldValue)) && (is_bool($newValue) || is_numeric($newValue))) {
+                return (0.0 != (float) $oldValue) !== (0.0 != (float) $newValue);
+            }
+        } elseif (is_numeric($oldValue) && is_numeric($newValue)) {
+            return (float) $oldValue != (float) $newValue;
+        }
+
+        return 0 !== strcasecmp((string) $oldValue, (string) $newValue);
     }
 }

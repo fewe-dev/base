@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.2
+
+### Fixed
+
+- `Variables::getChangedData()` returned the value instead of the key of changed booleans, and missed keys that exist
+  only in the new data and values that changed from or to null. It compares booleans with numbers as 0 and not 0, also
+  for numeric strings like "0", treats null like an empty string, and ignores `updated_at` also when the old data is
+  empty.
+
 ## 2.4.1
 
 ### Added

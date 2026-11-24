@@ -1,7 +1,7 @@
 {
     "name": "fewedev/base",
     "description": "Feasible web development base classes",
-    "version": "2.4.1",
+    "version": "2.4.2",
     "license": "MIT",
     "keywords": [
         "base"
